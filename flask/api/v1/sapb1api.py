@@ -170,3 +170,45 @@ class ShipmentsAPI(Resource):
             log = traceback.format_exc()
             current_app.logger.exception(e)
             return log, 501
+
+#Retrive Products on WHS
+class ItemsAPI(Resource):
+
+    def __init__(self):
+        super(ItemsAPI, self).__init__()
+
+    @jwt_required()
+    def get(self):
+        try:
+            limit = request.args.get("limit", 100)
+            limit = int(limit)
+            fields = request.args.get("fields",None)
+            whs = request.args.get("whs",None)
+            code = request.args.get("code",None)
+            itemslist = sapb1Adaptor.getItems(limit=limit, columns=fields, whs=whs, code=code)
+            return itemslist, 201
+        except Exception as e:
+            log = traceback.format_exc()
+            current_app.logger.exception(e)
+            return log, 501
+
+#Retrive Prices of Products on WHS
+class PricesAPI(Resource):
+
+    def __init__(self):
+        super(PricesAPI, self).__init__()
+
+    @jwt_required()
+    def get(self):
+        try:
+            limit = request.args.get("limit", 100)
+            limit = int(limit)
+            fields = request.args.get("fields",None)
+            whs = request.args.get("whs",None)
+            code = request.args.get("code",None)
+            pricelist = sapb1Adaptor.getPrices(limit=limit, columns=fields, whs=whs, code=code)
+            return pricelist, 201
+        except Exception as e:
+            log = traceback.format_exc()
+            current_app.logger.exception(e)
+            return log, 501
