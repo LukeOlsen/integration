@@ -95,6 +95,54 @@ class OrdersAPI(Resource):
             current_app.logger.exception(e)
             return log, 501
 
+class QuoationAPI(Resource):
+
+    def __init__(self):
+        super(QuoationAPI, self).__init__()
+
+    @jwt_required()
+    def put(self, function):
+        try:
+            if function == "fetch":
+                _num = request.args.get("num")
+                _num = 100 if _num is None else int(_num)
+                num = 100 if _num > 100 else _num
+                data = request.get_json(force=True)
+                columns = data['columns'] if 'columns' in data.keys() else {}
+                params = data['params']
+                orders = sapb1Adaptor.getOrders(num=num, columns=columns, params=params)
+                return orders, 201
+            else:
+                log = "No such function({0})!!!".format(function)
+                current_app.logger.error(log)
+                raise Exception(log)
+        except Exception as e:
+            log = traceback.format_exc()
+            current_app.logger.exception(e)
+            return log, 501
+
+    @jwt_required()
+    def post(self, function):
+        try:
+            quoations = request.get_json(force=True)
+            if function == "insert":
+                for quoation in quoations:
+                    try:
+                        quoation["bo_quoation_id"] = sapb1Adaptor.insertQuoation(quoation)
+                    except Exception as e:
+                        log = traceback.format_exc()
+                        quoation["bo_quoation_id"] = "####"
+                        current_app.logger.exception(e)
+            else:
+                log = "No such function({0})!!!".format(function)
+                current_app.logger.error(log)
+                raise Exception(log)
+            return quoation, 201
+        except Exception as e:
+            log = traceback.format_exc()
+            current_app.logger.exception(e)
+            return log, 501
+
 # Retrieve contacts by CardCode.
 class ContactsAPI(Resource):
 
@@ -111,7 +159,7 @@ class ContactsAPI(Resource):
                 data = request.get_json(force=True)
                 columns = data['columns'] if 'columns' in data.keys() else {}
                 cardCode = data['card_code']
-                contact = data['contact']
+                contact = data.get('contact',{})
                 contacts = sapb1Adaptor.getContacts(num=num, columns=columns, cardCode=cardCode, contact=contact)
                 return contacts, 201
             else:
