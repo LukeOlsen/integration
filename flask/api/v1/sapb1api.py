@@ -67,18 +67,18 @@ class OrdersAPI(Resource):
             if function == "insert":
                 for order in orders:
                     try:
-                        order["bo_order_id"] = sapb1Adaptor.insertOrder(order)
+                        order["order_id"] = sapb1Adaptor.insertOrder(order)
                         order["tx_status"] = 'S'
                     except Exception as e:
                         log = traceback.format_exc()
-                        order["bo_order_id"] = "####"
+                        order["order_id"] = "####"
                         order["tx_status"] = 'F'
                         order["tx_note"] = log
                         current_app.logger.exception(e)
             elif function == "cancel":
                 for order in orders:
                     try:
-                        order["bo_order_id"] = sapb1Adaptor.cancelOrder(order)
+                        order["order_id"] = sapb1Adaptor.cancelOrder(order)
                         order["tx_status"] = 'X'
                     except Exception as e:
                         log = traceback.format_exc()
@@ -95,49 +95,28 @@ class OrdersAPI(Resource):
             current_app.logger.exception(e)
             return log, 501
 
-class QuoationAPI(Resource):
+class QuotationAPI(Resource):
 
     def __init__(self):
-        super(QuoationAPI, self).__init__()
-
-    @jwt_required()
-    def put(self, function):
-        try:
-            if function == "fetch":
-                _num = request.args.get("num")
-                _num = 100 if _num is None else int(_num)
-                num = 100 if _num > 100 else _num
-                data = request.get_json(force=True)
-                columns = data['columns'] if 'columns' in data.keys() else {}
-                params = data['params']
-                orders = sapb1Adaptor.getOrders(num=num, columns=columns, params=params)
-                return orders, 201
-            else:
-                log = "No such function({0})!!!".format(function)
-                current_app.logger.error(log)
-                raise Exception(log)
-        except Exception as e:
-            log = traceback.format_exc()
-            current_app.logger.exception(e)
-            return log, 501
+        super(QuotationAPI, self).__init__()
 
     @jwt_required()
     def post(self, function):
         try:
-            quoations = request.get_json(force=True)
+            quotations = request.get_json(force=True)
             if function == "insert":
-                for quoation in quoations:
+                for quotation in quotations:
                     try:
-                        quoation["bo_quoation_id"] = sapb1Adaptor.insertQuoation(quoation)
+                        quotation["quotation_id"] = sapb1Adaptor.insertQuotation(quotation)
                     except Exception as e:
                         log = traceback.format_exc()
-                        quoation["bo_quoation_id"] = "####"
+                        quotation["quotation_id"] = "####"
                         current_app.logger.exception(e)
             else:
                 log = "No such function({0})!!!".format(function)
                 current_app.logger.error(log)
                 raise Exception(log)
-            return quoation, 201
+            return quotation, 201
         except Exception as e:
             log = traceback.format_exc()
             current_app.logger.exception(e)
