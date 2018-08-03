@@ -67,18 +67,18 @@ class OrdersAPI(Resource):
             if function == "insert":
                 for order in orders:
                     try:
-                        order["bo_order_id"] = sapb1Adaptor.insertOrder(order)
+                        order["order_id"] = sapb1Adaptor.insertOrder(order)
                         order["tx_status"] = 'S'
                     except Exception as e:
                         log = traceback.format_exc()
-                        order["bo_order_id"] = "####"
+                        order["order_id"] = "####"
                         order["tx_status"] = 'F'
                         order["tx_note"] = log
                         current_app.logger.exception(e)
             elif function == "cancel":
                 for order in orders:
                     try:
-                        order["bo_order_id"] = sapb1Adaptor.cancelOrder(order)
+                        order["order_id"] = sapb1Adaptor.cancelOrder(order)
                         order["tx_status"] = 'X'
                     except Exception as e:
                         log = traceback.format_exc()
@@ -94,6 +94,24 @@ class OrdersAPI(Resource):
             log = traceback.format_exc()
             current_app.logger.exception(e)
             return log, 501
+
+class QuotesAPI(Resource):
+
+    def __init__(self):
+        super(QuotesAPI, self).__init__()
+
+    @jwt_required()
+    def post(self):
+        quotations = request.get_json(force=True)
+        for quotation in quotations:
+            try:
+                quotation["quotation_id"] = sapb1Adaptor.insertQuotation(quotation)
+            except Exception as e:
+                log = traceback.format_exc()
+                quotation["quotation_id"] = "####"
+                current_app.logger.exception(e)
+        return quotation,201
+    
 
 # Retrieve contacts by CardCode.
 class ContactsAPI(Resource):
@@ -111,7 +129,7 @@ class ContactsAPI(Resource):
                 data = request.get_json(force=True)
                 columns = data['columns'] if 'columns' in data.keys() else {}
                 cardCode = data['card_code']
-                contact = data['contact']
+                contact = data.get('contact',{})
                 contacts = sapb1Adaptor.getContacts(num=num, columns=columns, cardCode=cardCode, contact=contact)
                 return contacts, 201
             else:

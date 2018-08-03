@@ -21,11 +21,12 @@ def bad_request_error(e):
 #    pass
 
 
-from .sapb1api import InfoAPI, CodeAPI, OrdersAPI, ContactsAPI, ShipmentsAPI, ItemsAPI, PricesAPI
+from .sapb1api import InfoAPI, CodeAPI, OrdersAPI, QuotesAPI, ContactsAPI, ShipmentsAPI, ItemsAPI, PricesAPI
 
 api_v1.add_resource(InfoAPI, '/info', endpoint='info')
 api_v1.add_resource(CodeAPI, '/code', endpoint='code')
 api_v1.add_resource(OrdersAPI, '/orders/<function>')
+api_v1.add_resource(QuotesAPI, '/quotes')
 api_v1.add_resource(ContactsAPI, '/contacts/<function>')
 api_v1.add_resource(ShipmentsAPI, '/shipments/<function>')
 api_v1.add_resource(ItemsAPI, '/items')
