@@ -95,32 +95,23 @@ class OrdersAPI(Resource):
             current_app.logger.exception(e)
             return log, 501
 
-class QuotationAPI(Resource):
+class QuotesAPI(Resource):
 
     def __init__(self):
-        super(QuotationAPI, self).__init__()
+        super(QuotesAPI, self).__init__()
 
     @jwt_required()
-    def post(self, function):
-        try:
-            quotations = request.get_json(force=True)
-            if function == "insert":
-                for quotation in quotations:
-                    try:
-                        quotation["quotation_id"] = sapb1Adaptor.insertQuotation(quotation)
-                    except Exception as e:
-                        log = traceback.format_exc()
-                        quotation["quotation_id"] = "####"
-                        current_app.logger.exception(e)
-            else:
-                log = "No such function({0})!!!".format(function)
-                current_app.logger.error(log)
-                raise Exception(log)
-            return quotation, 201
-        except Exception as e:
-            log = traceback.format_exc()
-            current_app.logger.exception(e)
-            return log, 501
+    def post(self):
+        quotations = request.get_json(force=True)
+        for quotation in quotations:
+            try:
+                quotation["quotation_id"] = sapb1Adaptor.insertQuotation(quotation)
+            except Exception as e:
+                log = traceback.format_exc()
+                quotation["quotation_id"] = "####"
+                current_app.logger.exception(e)
+        return quotation,201
+    
 
 # Retrieve contacts by CardCode.
 class ContactsAPI(Resource):
