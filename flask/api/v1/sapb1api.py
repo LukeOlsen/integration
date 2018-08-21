@@ -32,6 +32,8 @@ class CodeAPI(Resource):
             codes = sapb1Adaptor.getPayMethCods()
         elif type == "TaxCode":
             codes = sapb1Adaptor.getTaxCodes()
+        elif type == "USDRate":
+            codes = sapb1Adaptor.getUSDRate()
         return codes, 201
 
 class OrdersAPI(Resource):
