@@ -163,6 +163,28 @@ class ContactsAPI(Resource):
             current_app.logger.exception(e)
             return log, 501
 
+class CustomersAPI(Resource):
+
+    def __init__(self):
+        super(CustomersAPI, self).__init__()
+
+    @jwt_required()
+    def post(self, function):
+        try:
+            if function == "insert":
+                data = request.get_json(force=True)
+                customer = data['customer']
+                cardCode = sapb1Adaptor.insertBusinessPartner(customer)
+                return cardCode, 201
+            else:
+                log = "No such function({0})!!!".format(function)
+                current_app.logger.error(log)
+                raise Exception(log)
+        except Exception as e:
+            log = traceback.format_exc()
+            current_app.logger.exception(e)
+            return log, 501
+
 #Retrive Shipments
 class ShipmentsAPI(Resource):
 
