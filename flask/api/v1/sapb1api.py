@@ -176,6 +176,12 @@ class CustomersAPI(Resource):
                 customer = data['customer']
                 cardCode = sapb1Adaptor.insertBusinessPartner(customer)
                 return cardCode, 201
+            elif function == "update":
+                data = request.get_json(force=True)
+                customer = data['customer']
+                cardcode = data['cardcode']
+                cardCode = sapb1Adaptor.updateBusinessPartner(cardcode, customer)
+                return cardCode, 201
             else:
                 log = "No such function({0})!!!".format(function)
                 current_app.logger.error(log)
