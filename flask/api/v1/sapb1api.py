@@ -113,7 +113,36 @@ class QuotesAPI(Resource):
                 quotation["quotation_id"] = "####"
                 current_app.logger.exception(e)
         return quotation,201
-    
+
+class CustomersAPI(Resource):
+
+    def __init__(self):
+        super(CustomersAPI, self).__init__()
+
+    @jwt_required()
+    def post(self):
+        try:
+            data = request.get_json(force=True)
+            customer = data['customer']
+            cardCode = sapb1Adaptor.insertBusinessPartner(customer)
+            return cardCode, 201            
+        except Exception as e:
+            log = traceback.format_exc()
+            current_app.logger.exception(e)
+            return log, 501
+
+    @jwt_required()
+    def put(self):
+        try:
+            contactcode = request.args.get("cardcode",None)
+            data = request.get_json(force=True)
+            customer = data['customer']
+            cardCode = sapb1Adaptor.updateBusinessPartner(contactcode, customer)
+            return cardCode, 201
+        except Exception as e:
+            log = traceback.format_exc()
+            current_app.logger.exception(e)
+            return log, 501            
 
 # Retrieve contacts by CardCode.
 class ContactsAPI(Resource):
@@ -154,34 +183,6 @@ class ContactsAPI(Resource):
                     contactCode = sapb1Adaptor.insertContact(cardCode, contact)
                     contact["contact_code"] = contactCode
                 return contacts, 201
-            else:
-                log = "No such function({0})!!!".format(function)
-                current_app.logger.error(log)
-                raise Exception(log)
-        except Exception as e:
-            log = traceback.format_exc()
-            current_app.logger.exception(e)
-            return log, 501
-
-class CustomersAPI(Resource):
-
-    def __init__(self):
-        super(CustomersAPI, self).__init__()
-
-    @jwt_required()
-    def post(self, function):
-        try:
-            if function == "insert":
-                data = request.get_json(force=True)
-                customer = data['customer']
-                cardCode = sapb1Adaptor.insertBusinessPartner(customer)
-                return cardCode, 201
-            elif function == "update":
-                data = request.get_json(force=True)
-                customer = data['customer']
-                cardcode = data['cardcode']
-                cardCode = sapb1Adaptor.updateBusinessPartner(cardcode, customer)
-                return cardCode, 201
             else:
                 log = "No such function({0})!!!".format(function)
                 current_app.logger.error(log)
