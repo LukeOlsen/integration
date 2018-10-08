@@ -32,6 +32,8 @@ class CodeAPI(Resource):
             codes = sapb1Adaptor.getPayMethCods()
         elif type == "TaxCode":
             codes = sapb1Adaptor.getTaxCodes()
+        elif type == "USDRate":
+            codes = sapb1Adaptor.getUSDRate()
         return codes, 201
 
 class OrdersAPI(Resource):
@@ -111,7 +113,41 @@ class QuotesAPI(Resource):
                 quotation["quotation_id"] = "####"
                 current_app.logger.exception(e)
         return quotation,201
-    
+
+class CustomersAPI(Resource):
+
+    def __init__(self):
+        super(CustomersAPI, self).__init__()
+
+    def error_to_json(self, e, number):
+        log = traceback.format_exc()
+        current_app.logger.exception(e)
+        return log, number
+
+    @jwt_required()
+    def post(self):
+        data = request.get_json(force=True)
+        try:
+            customer = data['customer']
+            cardCode = sapb1Adaptor.insertBusinessPartner(customer)
+            return cardCode, 201
+        except KeyError as e:
+            return error_to_json(e, 400)
+        except Exception as e:
+            return error_to_json(e, 501)
+
+    @jwt_required()
+    def put(self):
+        data = request.get_json(force=True)
+        cardcode = request.args.get("cardcode", None)
+        try:
+            customer = data['customer']
+            cardCode = sapb1Adaptor.updateBusinessPartner(cardcode, customer)
+            return cardCode, 202
+        except KeyError as e:
+            return error_to_json(e, 400)
+        except Exception as e:
+            return error_to_json(e, 501)    
 
 # Retrieve contacts by CardCode.
 class ContactsAPI(Resource):
