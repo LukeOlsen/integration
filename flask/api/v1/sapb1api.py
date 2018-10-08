@@ -119,30 +119,35 @@ class CustomersAPI(Resource):
     def __init__(self):
         super(CustomersAPI, self).__init__()
 
+    def error_to_json(self, e, number):
+        log = traceback.format_exc()
+        current_app.logger.exception(e)
+        return log, number
+
     @jwt_required()
     def post(self):
+        data = request.get_json(force=True)
         try:
-            data = request.get_json(force=True)
             customer = data['customer']
             cardCode = sapb1Adaptor.insertBusinessPartner(customer)
-            return cardCode, 201            
+            return cardCode, 201
+        except KeyError as e:
+            return error_to_json(e, 400)
         except Exception as e:
-            log = traceback.format_exc()
-            current_app.logger.exception(e)
-            return log, 501
+            return error_to_json(e, 501)
 
     @jwt_required()
     def put(self):
+        data = request.get_json(force=True)
+        cardcode = request.args.get("cardcode", None)
         try:
-            contactcode = request.args.get("cardcode",None)
-            data = request.get_json(force=True)
             customer = data['customer']
-            cardCode = sapb1Adaptor.updateBusinessPartner(contactcode, customer)
-            return cardCode, 201
+            cardCode = sapb1Adaptor.updateBusinessPartner(cardcode, customer)
+            return cardCode, 202
+        except KeyError as e:
+            return error_to_json(e, 400)
         except Exception as e:
-            log = traceback.format_exc()
-            current_app.logger.exception(e)
-            return log, 501            
+            return error_to_json(e, 501)    
 
 # Retrieve contacts by CardCode.
 class ContactsAPI(Resource):
