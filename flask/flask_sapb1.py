@@ -168,10 +168,30 @@ class SAPB1Adaptor(object):
         if len(columns) > 0:
             cols = " ,".join(columns)
         ops = {key: '=' if 'op' not in params[key].keys() else params[key]['op'] for key in params.keys()}
+        print(ops)
         sql = """SELECT top {0} {1} FROM dbo.ORDR""".format(num, cols)
         if len(params) > 0:
             sql = sql + ' WHERE ' + " AND ".join(["{0} {1} %({2})s".format(k, ops[k], k) for k in params.keys()])
         args = {key: params[key]['value'] for key in params.keys()}
+        print(sql)
+        print(args)
+        return list(self.sql_adaptor.fetch_all(sql, args=args))
+    
+    def getDownPayment(self, num=1, columns=[], params={}):
+        """Retreive Down Payments from SAP B1.
+        """
+        cols = "*"
+        cols = '*'
+        if len(columns) > 0:
+            cols = " ,".join(columns)
+        ops = {key: '=' if 'op' not in params[key].keys() else params[key]['op'] for key in params.keys()}
+        print(ops)
+        sql = """SELECT top {0} {1} FROM dbo.ODPI""".format(num, cols)
+        if len(params) > 0:
+            sql = sql + ' WHERE ' + " AND ".join(["{0} {1} %({2})s".format(k, ops[k], k) for k in params.keys()])
+        args = {key: params[key]['value'] for key in params.keys()}
+        print(sql)
+        print(args)
         return list(self.sql_adaptor.fetch_all(sql, args=args))
 
     def getMainCurrency(self):
@@ -460,13 +480,12 @@ class SAPB1Adaptor(object):
        #     cursor.execute(link_quotation_sql)
        #     self.sql_adaptor.conn.commit()            
         downPayment = com.company.GetBusinessObject(com.constants.oDownPayments)
-        print(downPayment)
+        print(orderDocEntry)
         print(downPayment)
         print(downPayment)
         downPayment.DownPaymentType = com.constants.dptInvoice
         downPayment.DocDueDate = o['doc_due_date']
         downPayment.CardCode = 'C105212'
-        #downPayment.DocType = 'I'
         #order.NumAtCard = str(o['num_at_card'])
         #Cesehsa User Field
         downPayment.UserFields.Fields("U_WebOrderId").Value = str(o['U_WebOrderId'])
@@ -511,8 +530,9 @@ class SAPB1Adaptor(object):
         for item in o['items']:
             downPayment.Lines.Add()
             downPayment.Lines.SetCurrentLine(i)
-          #  downPayment.Lines.BaseRef = orderDocNum
-          #  downPayment.Lines.BaseEntry = orderDocEntry
+           # downPayment.Lines.BaseLine = i
+           # downPayment.Lines.BaseEntry = orderDocEntry
+           # downPayment.Lines.BaseType = 17
             downPayment.Lines.ItemCode = item['itemcode']
             downPayment.Lines.Quantity = float(item['quantity'])
             if item.get('price'):
@@ -520,24 +540,25 @@ class SAPB1Adaptor(object):
             i = i + 1
 
         downPayment.DocTotal = orderDocTotal    
-        print(downPayment.Add)
         lRetCode1 = downPayment.Add()
-        print(lRetCode1)
         if lRetCode1 != 0:
             error = str(self.com_adaptor.company.GetLastError())
             current_app.logger.error(error)
             raise Exception(error)
         #Linking Down Payment with Sales Order
-       # if orderDocEntry:
-       #     link_quotation_sql= """UPDATE dbo.RDR1
-       #                                 SET dbo.RDR1.BaseRef = q.DocNum, dbo.RDR1.BaseType = 23, dbo.RDR1.BaseEntry = q.DocEntry
-       #                                 FROM dbo.OQUT q
-       #                                 WHERE dbo.RDR1.DocEntry = '{0}'
-       #                                 AND q.DocEntry = '{1}'
-       #                              """.format(orderDocEntry,str(o['quotation_id']))
-       #     cursor = self.sql_adaptor.cursor
-       #     cursor.execute(link_quotation_sql)
-       #     self.sql_adaptor.conn.commit() 
+        print(params)
+        downpayments = self.getDownPayment(num=1, columns=['DocEntry'], params=params)
+        downPaymentDocEntry = downpayments[0]['DocEntry']
+        if orderDocEntry:
+            link_downpayment_sql= """UPDATE dbo.DPI1
+                                        SET dbo.DPI1.BaseRef = q.DocNum, dbo.DPI1.BaseType = 17, dbo.DPI1.BaseEntry = q.DocEntry
+                                        FROM dbo.ORDR q
+                                        WHERE dbo.DPI1.DocEntry = '{0}'
+                                        AND q.DocEntry = '{1}'
+                                     """.format(downPaymentDocEntry,orderDocEntry)
+            cursor = self.sql_adaptor.cursor
+            cursor.execute(link_downpayment_sql)
+            self.sql_adaptor.conn.commit() 
 
         return orderDocEntry
         
