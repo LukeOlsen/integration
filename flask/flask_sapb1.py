@@ -26,11 +26,11 @@ class SapB1ComAdaptor(object):
         company.CompanyDB = config['COMPANYDB']
         company.UserName = config['B1USERNAME']
         company.Password = config['B1PASSWORD']
-        #company.language = getattr(self.constants, config['LANGUAGE'])
+        company.Language = getattr(self.constants, config['LANGUAGE'])
         company.UseTrusted = config['USE_TRUSTED']
         result = company.Connect()
         if result != 0:
-            raise Exception("Not connected to COM %" % result)
+            raise Exception("Not connected to COM %s" % result)
         print('Connected to COM')
         
 
@@ -374,10 +374,10 @@ class SAPB1Adaptor(object):
         com = self.com_adaptor    
         order = com.company.GetBusinessObject(com.constants.oOrders)
         order.DocDueDate = o['doc_due_date']
-        order.CardCode = o['card_code']
-        order.NumAtCard = str(o['num_at_card'])
+        order.CardCode = 'C105212'
+        #order.NumAtCard = str(o['num_at_card'])
         #Cesehsa User Field
-        order.UserFields.Fields("U_XAM_OC").Value = str(o['orden_compra'])
+        order.UserFields.Fields("U_WebOrderId").Value = str(o['U_WebOrderId'])
         
         if 'expenses_freightname' in o.keys():
             order.Expenses.ExpenseCode = self.getExpnsCode(o['expenses_freightname'])
@@ -396,20 +396,20 @@ class SAPB1Adaptor(object):
             order.PaymentMethod = o['payment_method']
 
         ## Set bill to address properties
-        #order.AddressExtension.BillToCity = o['billto_city']
-        #order.AddressExtension.BillToCountry = o['billto_country']
-        #order.AddressExtension.BillToCounty = o['billto_country']
-        #order.AddressExtension.BillToState = o['billto_state']
-        #order.AddressExtension.BillToStreet = o['billto_address']
-        #order.AddressExtension.BillToZipCode = o['billto_zipcode']
+        order.AddressExtension.BillToCity = o['billto_city']
+        order.AddressExtension.BillToCountry = o['billto_country']
+        order.AddressExtension.BillToCounty = o['billto_country']
+        order.AddressExtension.BillToState = o['billto_state']
+        order.AddressExtension.BillToStreet = o['billto_address']
+        order.AddressExtension.BillToZipCode = o['billto_zipcode']
 
         ## Set ship to address properties
-        #order.AddressExtension.ShipToCity = o['shipto_city']
-        #order.AddressExtension.ShipToCountry = o['shipto_country']
-        #order.AddressExtension.ShipToCounty = o['shipto_county']
-        #order.AddressExtension.ShipToState = o['shipto_state']
-        #order.AddressExtension.ShipToStreet = o['shipto_address']
-        #order.AddressExtension.ShipToZipCode = o['shipto_zipcode']
+        order.AddressExtension.ShipToCity = o['shipto_city']
+        order.AddressExtension.ShipToCountry = o['shipto_country']
+        order.AddressExtension.ShipToCounty = o['shipto_county']
+        order.AddressExtension.ShipToState = o['shipto_state']
+        order.AddressExtension.ShipToStreet = o['shipto_address']
+        order.AddressExtension.ShipToZipCode = o['shipto_zipcode']
 
         # Set Comments
         if 'comments' in o.keys():
@@ -424,38 +424,121 @@ class SAPB1Adaptor(object):
             if item.get('price'):
                 order.Lines.UnitPrice = float(item['price'])
             i = i + 1
-
+        print(order.Add)
         lRetCode = order.Add()
+        print(lRetCode)
         if lRetCode != 0:
             error = str(self.com_adaptor.company.GetLastError())
             current_app.logger.error(error)
             raise Exception(error)
         
         params = None
-        params = {'NumAtCard': {'value': str(o['num_at_card'])}}
-        orders = self.getOrders(num=1, columns=['DocEntry'], params=params)
+        params = {'U_WebOrderId': {'value': str(o['U_WebOrderId'])}}
+        orders = self.getOrders(num=1, columns=['DocEntry', 'DocTotal', 'DocNum'], params=params)
         orderDocEntry = orders[0]['DocEntry']
+        orderDocTotal = orders[0]['DocTotal']
+        orderDocNum = orders[0]['DocNum']
         # Set Salesperson
-        if 'slpcode' in o.keys():
-            salesperson_sql= """UPDATE dbo.ORDR
-                                        SET SlpCode = {0}
-                                        WHERE DocEntry = '{1}'
-                                     """.format(o['slpcode'], orderDocEntry)
-            cursor = self.sql_adaptor.cursor
-            cursor.execute(salesperson_sql)
-            self.sql_adaptor.conn.commit()
+       # if 'slpcode' in o.keys():
+       #     salesperson_sql= """UPDATE dbo.ORDR
+       #                                 SET SlpCode = {0}
+       #                                 WHERE DocEntry = '{1}'
+       #                              """.format(o['slpcode'], orderDocEntry)
+       #     cursor = self.sql_adaptor.cursor
+       #     cursor.execute(salesperson_sql)
+       #     self.sql_adaptor.conn.commit()
             
         #Linking Sales Order with Quotation
-        if 'quotation_id' in o.keys():
-            link_quotation_sql= """UPDATE dbo.RDR1
-                                        SET dbo.RDR1.BaseRef = q.DocNum, dbo.RDR1.BaseType = 23, dbo.RDR1.BaseEntry = q.DocEntry
-                                        FROM dbo.OQUT q
-                                        WHERE dbo.RDR1.DocEntry = '{0}'
-                                        AND q.DocEntry = '{1}'
-                                     """.format(orderDocEntry,str(o['quotation_id']))
-            cursor = self.sql_adaptor.cursor
-            cursor.execute(link_quotation_sql)
-            self.sql_adaptor.conn.commit()            
+       # if 'quotation_id' in o.keys():
+       #     link_quotation_sql= """UPDATE dbo.RDR1
+       #                                 SET dbo.RDR1.BaseRef = q.DocNum, dbo.RDR1.BaseType = 23, dbo.RDR1.BaseEntry = q.DocEntry
+       #                                 FROM dbo.OQUT q
+       #                                 WHERE dbo.RDR1.DocEntry = '{0}'
+       #                                 AND q.DocEntry = '{1}'
+       #                              """.format(orderDocEntry,str(o['quotation_id']))
+       #     cursor = self.sql_adaptor.cursor
+       #     cursor.execute(link_quotation_sql)
+       #     self.sql_adaptor.conn.commit()            
+        downPayment = com.company.GetBusinessObject(com.constants.oDownPayments)
+        print(downPayment)
+        print(downPayment)
+        print(downPayment)
+        downPayment.DownPaymentType = com.constants.dptInvoice
+        downPayment.DocDueDate = o['doc_due_date']
+        downPayment.CardCode = 'C105212'
+        #downPayment.DocType = 'I'
+        #order.NumAtCard = str(o['num_at_card'])
+        #Cesehsa User Field
+        downPayment.UserFields.Fields("U_WebOrderId").Value = str(o['U_WebOrderId'])
+        
+       # if 'expenses_freightname' in o.keys():
+       #     downPayment.Expenses.ExpenseCode = self.getExpnsCode(o['expenses_freightname'])
+       #     downPayment.Expenses.LineTotal = o['expenses_linetotal']
+       #     downPayment.Expenses.TaxCode = o['expenses_taxcode']
+
+       # if 'discount_percent' in o.keys():
+       #     downPayment.DiscountPercent = o['discount_percent']
+
+        # Set Shipping Type
+       # if 'transport_name' in o.keys():
+       #     downPayment.TransportationCode = self.getTrnspCode(o['transport_name'])
+
+        # Set Payment Method
+       # if 'payment_method' in o.keys():
+       #     downPayment.PaymentMethod = o['payment_method']
+
+        ## Set bill to address properties
+        #downPayment.AddressExtension.BillToCity = o['billto_city']
+        #downPayment.AddressExtension.BillToCountry = o['billto_country']
+        #downPayment.AddressExtension.BillToCounty = o['billto_country']
+        #downPayment.AddressExtension.BillToState = o['billto_state']
+        #downPayment.AddressExtension.BillToStreet = o['billto_address']
+        #downPayment.AddressExtension.BillToZipCode = o['billto_zipcode']
+
+        ## Set ship to address properties
+        #downPayment.AddressExtension.ShipToCity = o['shipto_city']
+        #downPayment.AddressExtension.ShipToCountry = o['shipto_country']
+        #downPayment.AddressExtension.ShipToCounty = o['shipto_county']
+        #downPayment.AddressExtension.ShipToState = o['shipto_state']
+        #downPayment.AddressExtension.ShipToStreet = o['shipto_address']
+        #downPayment.AddressExtension.ShipToZipCode = o['shipto_zipcode']
+
+        # Set Comments
+        if 'comments' in o.keys():
+            downPayment.Comments = o['comments']
+
+        i = 0
+        for item in o['items']:
+            downPayment.Lines.Add()
+            downPayment.Lines.SetCurrentLine(i)
+          #  downPayment.Lines.BaseRef = orderDocNum
+          #  downPayment.Lines.BaseEntry = orderDocEntry
+            downPayment.Lines.ItemCode = item['itemcode']
+            downPayment.Lines.Quantity = float(item['quantity'])
+            if item.get('price'):
+                downPayment.Lines.UnitPrice = float(item['price'])
+            i = i + 1
+
+        downPayment.DocTotal = orderDocTotal    
+        print(downPayment.Add)
+        lRetCode1 = downPayment.Add()
+        print(lRetCode1)
+        if lRetCode1 != 0:
+            error = str(self.com_adaptor.company.GetLastError())
+            current_app.logger.error(error)
+            raise Exception(error)
+        #Linking Down Payment with Sales Order
+       # if orderDocEntry:
+       #     link_quotation_sql= """UPDATE dbo.RDR1
+       #                                 SET dbo.RDR1.BaseRef = q.DocNum, dbo.RDR1.BaseType = 23, dbo.RDR1.BaseEntry = q.DocEntry
+       #                                 FROM dbo.OQUT q
+       #                                 WHERE dbo.RDR1.DocEntry = '{0}'
+       #                                 AND q.DocEntry = '{1}'
+       #                              """.format(orderDocEntry,str(o['quotation_id']))
+       #     cursor = self.sql_adaptor.cursor
+       #     cursor.execute(link_quotation_sql)
+       #     self.sql_adaptor.conn.commit() 
+
         return orderDocEntry
         
     def insertQuotation(self, q):
@@ -608,3 +691,4 @@ class SAPB1Adaptor(object):
             sql = """SELECT top {0} {1} FROM dbo.OITW {2}""".format(limit, cols, (" WHERE " + wclause) if wclause else '')
         print sql
         return list(self.sql_adaptor.fetch_all(sql))
+

@@ -57,6 +57,7 @@ def create_app(config_module=None):
     handler.setLevel(app.config['LOGGING_LEVEL'])
     formatter = logging.Formatter(app.config['LOGGING_FORMAT'])
     handler.setFormatter(formatter)
+    app.debug = True
     app.logger.addHandler(handler)
     app.logger.setLevel(app.config['LOGGING_LEVEL'])
 

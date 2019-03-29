@@ -66,6 +66,7 @@ class OrdersAPI(Resource):
     def post(self, function):
         try:
             orders = request.get_json(force=True)
+            print(orders)
             if function == "insert":
                 for order in orders:
                     try:
