@@ -186,6 +186,7 @@ class SAPB1Adaptor(object):
             cols = " ,".join(columns)
         ops = {key: '=' if 'op' not in params[key].keys() else params[key]['op'] for key in params.keys()}
         print(ops)
+        print(params)
         sql = """SELECT top {0} {1} FROM dbo.ODPI""".format(num, cols)
         if len(params) > 0:
             sql = sql + ' WHERE ' + " AND ".join(["{0} {1} %({2})s".format(k, ops[k], k) for k in params.keys()])
@@ -396,13 +397,33 @@ class SAPB1Adaptor(object):
         order.DocDueDate = o['doc_due_date']
         order.CardCode = 'C105212'
         #order.NumAtCard = str(o['num_at_card'])
-        #Cesehsa User Field
+        # UDF for Magento Web Order ID
         order.UserFields.Fields("U_WebOrderId").Value = str(o['U_WebOrderId'])
+        order.UserFields.Fields("U_TWBS_ShipTo_FName").Value = str(o['shipping_first_name'])
+        order.UserFields.Fields("U_TWBS_ShipTo_LName").Value = str(o['shipping_last_name'])
+        order.UserFields.Fields("U_web_order_fname").Value = str(o['order_first_name'])
+        order.UserFields.Fields("U_web_order_lname").Value = str(o['order_last_name'])
+        order.UserFields.Fields("U_web_orderphone").Value = str(o['order_phone'])
+        order.UserFields.Fields("U_web_shipphone").Value = str(o['shipping_phone'])
+        order.UserFields.Fields("U_Web_CC_Last4").Value = str(o['cc_last4'])
+        order.UserFields.Fields("U_TWBS_ShipTo_Email").Value = str(o['order_email'])
+
+        if o['cc_type'] == 'MASTERCARD':
+            order.UserFields.Fields("U_web_cc_type").Value = 'MC'
+        elif o['cc_type'] == 'VISA':
+            order.UserFields.Fields("U_web_cc_type").Value = 'VISA'
+        elif o['cc_type'] == 'AMERICAN EXPRESS':
+            order.UserFields.Fields("U_web_cc_type").Value = 'AMEX'
+        elif o['cc_type'] == 'DISCOVER':
+            order.UserFields.Fields("U_web_cc_type").Value = 'DC'
+
+        if o['user_id']:
+            order.UserFields.Fields("U_WebCustomerID").Value = str(o['user_id']) 
         
-        if 'expenses_freightname' in o.keys():
-            order.Expenses.ExpenseCode = self.getExpnsCode(o['expenses_freightname'])
-            order.Expenses.LineTotal = o['expenses_linetotal']
-            order.Expenses.TaxCode = o['expenses_taxcode']
+        if 'order_shipping_cost' in o.keys():
+            order.Expenses.ExpenseCode = 1
+            order.Expenses.LineTotal = o['order_shipping_cost']
+            order.Expenses.TaxCode = 'FLEX'
 
         if 'discount_percent' in o.keys():
             order.DiscountPercent = o['discount_percent']
@@ -487,7 +508,7 @@ class SAPB1Adaptor(object):
         downPayment.DocDueDate = o['doc_due_date']
         downPayment.CardCode = 'C105212'
         #order.NumAtCard = str(o['num_at_card'])
-        #Cesehsa User Field
+        # User Field
         downPayment.UserFields.Fields("U_WebOrderId").Value = str(o['U_WebOrderId'])
         
        # if 'expenses_freightname' in o.keys():
@@ -547,8 +568,10 @@ class SAPB1Adaptor(object):
             raise Exception(error)
         #Linking Down Payment with Sales Order
         print(params)
-        downpayments = self.getDownPayment(num=1, columns=['DocEntry'], params=params)
+        downpayments = self.getDownPayment(num=1, columns=['DocEntry', 'DocTotal', 'DocDate'], params=params)
         downPaymentDocEntry = downpayments[0]['DocEntry']
+        downPaymentDocTotal = downpayments[0]['DocTotal']
+        downPaymentDocDate = downpayments[0]['DocDate']
         if orderDocEntry:
             link_downpayment_sql= """UPDATE dbo.DPI1
                                         SET dbo.DPI1.BaseRef = q.DocNum, dbo.DPI1.BaseType = 17, dbo.DPI1.BaseEntry = q.DocEntry
@@ -559,6 +582,30 @@ class SAPB1Adaptor(object):
             cursor = self.sql_adaptor.cursor
             cursor.execute(link_downpayment_sql)
             self.sql_adaptor.conn.commit() 
+
+        incomingPayments = com.company.GetBusinessObject(com.constants.oIncomingPayments)
+        if o['giftcard_used'] == 'Yes':
+            pass
+        elif o['giftcard_used'] == 'No':
+            print(downPaymentDocTotal)
+            print(downPaymentDocEntry)
+            incomingPayments.Invoices.DocEntry = downPaymentDocEntry
+            incomingPayments.Invoices.InvoiceType = com.constants.it_DownPayment
+            incomingPayments.Invoices.SumApplied = downPaymentDocTotal
+            print(incomingPayments.Invoices.SumApplied)
+            incomingPayments.CardCode = 'C105212'
+            #incomingPayments.Comments = 'Created by Integration'
+            incomingPayments.TransferAccount = '_SYS00000000166'
+            incomingPayments.TransferReference = o['U_WebOrderId']
+            incomingPayments.TransferDate = downPaymentDocDate
+            incomingPayments.TransferSum = downPaymentDocTotal
+            print(incomingPayments.TransferSum)
+            lRetCode2 = incomingPayments.Add()
+            if lRetCode2 != 0:
+                error = str(self.com_adaptor.company.GetLastError())
+                current_app.logger.error(error)
+                raise Exception(error)
+
 
         return orderDocEntry
         
