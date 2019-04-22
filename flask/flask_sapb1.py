@@ -400,7 +400,7 @@ class SAPB1Adaptor(object):
         # UDF for Magento Web Order ID
         order.UserFields.Fields("U_WebOrderId").Value = str(o['U_WebOrderId'])
         order.UserFields.Fields("U_TWBS_ShipTo_FName").Value = str(o['shipping_first_name'])
-        order.UserFields.Fields("U_TWBS_ShipTo_LName").Value = str(o['shipping_last_name'])
+        order.UserFields.Fields("U_TWBS_ShipTo_Lname").Value = str(o['shipping_last_name'])
         order.UserFields.Fields("U_web_order_fname").Value = str(o['order_first_name'])
         order.UserFields.Fields("U_web_order_lname").Value = str(o['order_last_name'])
         order.UserFields.Fields("U_web_orderphone").Value = str(o['order_phone'])
