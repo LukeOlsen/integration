@@ -585,8 +585,38 @@ class SAPB1Adaptor(object):
 
         incomingPayments = com.company.GetBusinessObject(com.constants.oIncomingPayments)
         if o['giftcard_used'] == 'Yes':
-            pass
+            incomingPayments1 = com.company.GetBusinessObject(com.constants.oIncomingPayments)
+            incomingPayments2 = com.company.GetBusinessObject(com.constants.oIncomingPayments)
+            incomingPayments1.Invoices.DocEntry = downPaymentDocEntry
+            incomingPayments1.Invoices.InvoiceType = com.constants.it_DownPayment
+            incomingPayments2.Invoices.DocEntry = downPaymentDocEntry
+            incomingPayments2.Invoices.InvoiceType = com.constants.it_DownPayment
+            incomingPayments1.Invoices.SumApplied = float(o['giftcard_amount'])
+            incomingPayments2.Invoices.SumApplied = (float(downPaymentDocTotal) - float(o['giftcard_amount']))
+            incomingPayments1.TransferAccount = '_SYS00000000517'
+            incomingPayments2.TransferAccount = '_SYS00000000166'
+            incomingPayments1.TransferReference = o['U_WebOrderId']
+            incomingPayments2.TransferReference = o['U_WebOrderId']
+            incomingPayments1.CardCode = 'C105212'
+            incomingPayments2.CardCode = 'C105212'
+            incomingPayments1.TransferDate = downPaymentDocDate
+            incomingPayments2.TransferDate = downPaymentDocDate
+            lRetCode2 = incomingPayments1.Add()
+            if lRetCode2 != 0:
+                error = str(self.com_adaptor.company.GetLastError())
+                current_app.logger.error(error)
+                raise Exception(error)
+            lRetCode3 = incomingPayments2.Add()
+            if lRetCode3 != 0:
+                error = str(self.com_adaptor.company.GetLastError())
+                current_app.logger.error(error)
+                raise Exception(error)
+
+
+
         elif o['giftcard_used'] == 'No':
+            print(float(downPaymentDocTotal)-float(o['giftcard_amount']))
+            incomingPayments = com.company.GetBusinessObject(com.constants.oIncomingPayments)
             print(downPaymentDocTotal)
             print(downPaymentDocEntry)
             incomingPayments.Invoices.DocEntry = downPaymentDocEntry
