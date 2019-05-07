@@ -5,6 +5,9 @@ from time import time, strftime
 import decimal
 from pythoncom import CoInitialize
 import win32com.client.dynamic
+from flask_mail import Message
+from app import Mail
+
 
 try:
     from flask import _app_ctx_stack as stack
@@ -470,6 +473,9 @@ class SAPB1Adaptor(object):
         if lRetCode != 0:
             error = str(self.com_adaptor.company.GetLastError())
             current_app.logger.error(error)
+            msg = Message("TEST", recipients = ['id1@gmail.com'])
+            msg.body = "This is a test."
+            mail.send(msg)
             raise Exception(error)
         
         params = None
