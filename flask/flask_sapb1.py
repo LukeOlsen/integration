@@ -399,6 +399,7 @@ class SAPB1Adaptor(object):
         order.CardCode = 'C105212'
         #order.NumAtCard = str(o['num_at_card'])
         # UDF for Magento Web Order ID
+        order.UserFields.Fields("U_OrderSource").Value = 'Web Order'
         order.UserFields.Fields("U_WebOrderId").Value = str(o['U_WebOrderId'])
         order.UserFields.Fields("U_TWBS_ShipTo_FName").Value = str(o['shipping_first_name'])
         order.UserFields.Fields("U_TWBS_ShipTo_Lname").Value = str(o['shipping_last_name'])
@@ -486,30 +487,8 @@ class SAPB1Adaptor(object):
         orderDocEntry = orders[0]['DocEntry']
         orderDocTotal = orders[0]['DocTotal']
         orderDocNum = orders[0]['DocNum']
-        # Set Salesperson
-       # if 'slpcode' in o.keys():
-       #     salesperson_sql= """UPDATE dbo.ORDR
-       #                                 SET SlpCode = {0}
-       #                                 WHERE DocEntry = '{1}'
-       #                              """.format(o['slpcode'], orderDocEntry)
-       #     cursor = self.sql_adaptor.cursor
-       #     cursor.execute(salesperson_sql)
-       #     self.sql_adaptor.conn.commit()
-            
-        #Linking Sales Order with Quotation
-       # if 'quotation_id' in o.keys():
-       #     link_quotation_sql= """UPDATE dbo.RDR1
-       #                                 SET dbo.RDR1.BaseRef = q.DocNum, dbo.RDR1.BaseType = 23, dbo.RDR1.BaseEntry = q.DocEntry
-       #                                 FROM dbo.OQUT q
-       #                                 WHERE dbo.RDR1.DocEntry = '{0}'
-       #                                 AND q.DocEntry = '{1}'
-       #                              """.format(orderDocEntry,str(o['quotation_id']))
-       #     cursor = self.sql_adaptor.cursor
-       #     cursor.execute(link_quotation_sql)
-       #     self.sql_adaptor.conn.commit()         
-       # 
-
-       if o['order_total'] > 0:
+        
+        if o['order_total'] > 0:
 
 
             if o['giftcard_used'] == 'No':
@@ -524,6 +503,15 @@ class SAPB1Adaptor(object):
                 #order.NumAtCard = str(o['num_at_card'])
                 # User Field
                 downPayment.UserFields.Fields("U_WebOrderId").Value = str(o['U_WebOrderId'])
+                downPayment.UserFields.Fields("U_OrderSource").Value = 'Web Order'
+                downPayment.UserFields.Fields("U_TWBS_ShipTo_FName").Value = str(o['shipping_first_name'])
+                downPayment.UserFields.Fields("U_TWBS_ShipTo_Lname").Value = str(o['shipping_last_name'])
+                downPayment.UserFields.Fields("U_web_order_fname").Value = str(o['order_first_name'])
+                downPayment.UserFields.Fields("U_web_order_lname").Value = str(o['order_last_name'])
+                downPayment.UserFields.Fields("U_web_orderphone").Value = str(o['order_phone'])
+                downPayment.UserFields.Fields("U_web_shipphone").Value = str(o['shipping_phone'])
+                downPayment.UserFields.Fields("U_Web_CC_Last4").Value = str(o['cc_last4'])
+                downPayment.UserFields.Fields("U_TWBS_ShipTo_Email").Value = str(o['order_email'])
 
                 # Set Comments
                 if 'comments' in o.keys():
@@ -591,47 +579,36 @@ class SAPB1Adaptor(object):
 
             if o['giftcard_used'] == 'Yes' and o['giftcard_amount'] < o['order_total']:
                 print("DOUBLE DOWN PAYMENT")
-                downPayment = com.company.GetBusinessObject(com.constants.oDownPayments)
-                downPayment1 = com.company.GetBusinessObject(com.constants.oDownPayments)
-                downPayment.DownPaymentType = com.constants.dptInvoice
-                downPayment.DocDueDate = o['doc_due_date']
-                downPayment.CardCode = 'C105212'
-                downPayment1.DownPaymentType = com.constants.dptInvoice
-                downPayment1.DocDueDate = o['doc_due_date']
-                downPayment1.CardCode = 'C105212'
-                #order.NumAtCard = str(o['num_at_card'])
-                # User Field
-                downPayment.UserFields.Fields("U_WebOrderId").Value = str(o['U_WebOrderId'])
-                downPayment1.UserFields.Fields("U_WebOrderId").Value = str(o['U_WebOrderId'])
+                cashDownPayment = com.company.GetBusinessObject(com.constants.oDownPayments)
+                cashDownPayment.DownPaymentType = com.constants.dptInvoice
+                cashDownPayment.DocDueDate = o['doc_due_date']
+                cashDownPayment.CardCode = 'C105212'
+                cashDownPayment.UserFields.Fields("U_WebOrderId").Value = str(o['U_WebOrderId'])
 
-                # Set Comments
-                if 'comments' in o.keys():
-                    downPayment.Comments = o['comments']
+                gcDownPayment = com.company.GetBusinessObject(com.constants.oDownPayments)
+                gcDownPayment.DownPaymentType = com.constants.dptInvoice
+                gcDownPayment.DocDueDate = o['doc_due_date']
+                gcDownPayment.CardCode = 'C105212'
+                gcDownPayment.UserFields.Fields("U_WebOrderId").Value = str(o['U_WebOrderId'])
 
                 i = 0
                 for item in o['items']:
-                    downPayment.Lines.Add()
-                    downPayment.Lines.SetCurrentLine(i)
-                # downPayment.Lines.BaseLine = i
-                # downPayment.Lines.BaseEntry = orderDocEntry
-                # downPayment.Lines.BaseType = 17
-                    downPayment.Lines.ItemCode = item['itemcode']
-                    downPayment.Lines.Quantity = float(item['quantity'])
+                    cashDownPayment.Lines.Add()
+                    cashDownPayment.Lines.SetCurrentLine(i)
+                    cashDownPayment.Lines.ItemCode = item['itemcode']
+                    cashDownPayment.Lines.Quantity = float(item['quantity'])
                     if item.get('price'):
-                        downPayment.Lines.UnitPrice = float(item['price'])
-                    downPayment1.Lines.Add()
-                    downPayment1.Lines.SetCurrentLine(i)
-                # downPayment.Lines.BaseLine = i
-                # downPayment.Lines.BaseEntry = orderDocEntry
-                # downPayment.Lines.BaseType = 17
-                    downPayment1.Lines.ItemCode = item['itemcode']
-                    downPayment1.Lines.Quantity = float(item['quantity'])
+                        cashDownPayment.Lines.UnitPrice = float(item['price'])
+                    gcDownPayment.Lines.Add()
+                    gcDownPayment.Lines.SetCurrentLine(i)
+                    gcDownPayment.Lines.ItemCode = item['itemcode']
+                    gcDownPayment.Lines.Quantity = float(item['quantity'])
                     if item.get('price'):
-                        downPayment1.Lines.UnitPrice = float(item['price'])
+                        gcDownPayment.Lines.UnitPrice = float(item['price'])
                     i = i + 1
 
-                downPayment.DocTotal = (float(orderDocTotal) - float(o['giftcard_amount']))    
-                lRetCode1 = downPayment.Add()
+                cashDownPayment.DocTotal = (float(orderDocTotal) - float(o['giftcard_amount']))    
+                lRetCode1 = cashDownPayment.Add()
 
                 if lRetCode1 != 0:
                     error = str(self.com_adaptor.company.GetLastError())
@@ -651,39 +628,30 @@ class SAPB1Adaptor(object):
                                             """.format(downPaymentDocEntry,orderDocEntry)
                     cursor = self.sql_adaptor.cursor
                     cursor.execute(link_downpayment_sql)
-                    self.sql_adaptor.conn.commit() 
+                    self.sql_adaptor.conn.commit()
 
-                print("REGULAR DPM:")
-                print(downPaymentDocEntry)
-                print(downPaymentDocTotal)
-
-                incomingPayments2 = com.company.GetBusinessObject(com.constants.oIncomingPayments)
-                incomingPayments2.Invoices.DocEntry = downPaymentDocEntry
-                incomingPayments2.Invoices.InvoiceType = com.constants.it_DownPayment
-                incomingPayments2.Invoices.SumApplied = downPaymentDocTotal
-                incomingPayments2.TransferSum = downPaymentDocTotal
-                incomingPayments2.TransferAccount = '_SYS00000000166'
-                incomingPayments2.TransferReference = o['U_WebOrderId']
-                incomingPayments2.CardCode = 'C105212'
-                incomingPayments2.TransferDate = downPaymentDocDate
-                lRetCode3 = incomingPayments2.Add()
+                cashIncomingPayments = com.company.GetBusinessObject(com.constants.oIncomingPayments)
+                cashIncomingPayments.Invoices.DocEntry = downPaymentDocEntry
+                cashIncomingPayments.Invoices.InvoiceType = com.constants.it_DownPayment
+                cashIncomingPayments.Invoices.SumApplied = downPaymentDocTotal
+                cashIncomingPayments.TransferSum = downPaymentDocTotal
+                cashIncomingPayments.TransferAccount = '_SYS00000000166'
+                cashIncomingPayments.TransferReference = o['U_WebOrderId']
+                cashIncomingPayments.CardCode = 'C105212'
+                cashIncomingPayments.TransferDate = downPaymentDocDate
+                lRetCode3 = cashIncomingPayments.Add()
                 if lRetCode3 != 0:
                     error = str(self.com_adaptor.company.GetLastError())
                     current_app.logger.error(error)
                     raise Exception(error)
                     
-
-
-
-                downPayment1.DocTotal = float(o['giftcard_amount'])
-                lRetCode2 = downPayment1.Add()
+                gcDownPayment.DocTotal = float(o['giftcard_amount'])
+                lRetCode2 = gcDownPayment.Add()
 
                 if lRetCode2 != 0:
                     error = str(self.com_adaptor.company.GetLastError())
                     current_app.logger.error(error)
                     raise Exception(error)
-
-
             
                 #Linking Down Payment with Sales Order
                 print(params)
@@ -705,27 +673,16 @@ class SAPB1Adaptor(object):
                     cursor.execute(link_downpayment_sql)
                     self.sql_adaptor.conn.commit() 
 
-                print("GC DOWN:")
-                print(downPaymentDocEntry1)
-                print(downPaymentDocTotal1)
-
-                print("CASH DOWN:")
-                print(downPaymentDocEntry)
-                print(downPaymentDocTotal)
-
-
-
-
-                incomingPayments1 = com.company.GetBusinessObject(com.constants.oIncomingPayments)
-                incomingPayments1.Invoices.DocEntry = downPaymentDocEntry1
-                incomingPayments1.Invoices.InvoiceType = com.constants.it_DownPayment
-                incomingPayments1.Invoices.SumApplied = downPaymentDocTotal1
-                incomingPayments1.TransferSum = downPaymentDocTotal1
-                incomingPayments1.TransferAccount = '_SYS00000000517'
-                incomingPayments1.TransferReference = o['U_WebOrderId']
-                incomingPayments1.CardCode = 'C105212'
-                incomingPayments1.TransferDate = downPaymentDocDate1
-                lRetCode2 = incomingPayments1.Add()
+                gcIncomingPayments = com.company.GetBusinessObject(com.constants.oIncomingPayments)
+                gcIncomingPayments.Invoices.DocEntry = downPaymentDocEntry1
+                gcIncomingPayments.Invoices.InvoiceType = com.constants.it_DownPayment
+                gcIncomingPayments.Invoices.SumApplied = downPaymentDocTotal1
+                gcIncomingPayments.TransferSum = downPaymentDocTotal1
+                gcIncomingPayments.TransferAccount = '_SYS00000000517'
+                gcIncomingPayments.TransferReference = o['U_WebOrderId']
+                gcIncomingPayments.CardCode = 'C105212'
+                gcIncomingPayments.TransferDate = downPaymentDocDate1
+                lRetCode2 = gcIncomingPayments.Add()
                 if lRetCode2 != 0:
                     error = str(self.com_adaptor.company.GetLastError())
                     current_app.logger.error(error)
