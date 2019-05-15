@@ -6,7 +6,7 @@ import decimal
 from pythoncom import CoInitialize
 import win32com.client.dynamic
 from flask_mail import Message
-from app import Mail
+from api.app import mail
 
 
 try:
@@ -856,6 +856,122 @@ class SAPB1Adaptor(object):
             shipmentId = shipment['DocEntry']
             shipment['items'] = self._getShipmentItems(shipmentId, itemColumns)
         return shipments
+
+    def insertShipment(self, o):
+        """Insert shipments into SAP B1.
+        """
+        com = self.com_adaptor
+        delivery =  com.company.GetBusinessObject(com.constants.oDeliveryNotes)
+        delivery.DocDueDate = o['doc_due_date']
+        delivery.CardCode = 'C105212'
+        #order.NumAtCard = str(o['num_at_card'])
+        # UDF for Magento Web Order ID
+        delivery.UserFields.Fields("U_OrderSource").Value = 'Web Order'
+        delivery.UserFields.Fields("U_WebOrderId").Value = str(o['U_WebOrderId'])
+        delivery.UserFields.Fields("U_TWBS_ShipTo_FName").Value = str(o['shipping_first_name'])
+        delivery.UserFields.Fields("U_TWBS_ShipTo_Lname").Value = str(o['shipping_last_name'])
+        delivery.UserFields.Fields("U_web_order_fname").Value = str(o['order_first_name'])
+        delivery.UserFields.Fields("U_web_order_lname").Value = str(o['order_last_name'])
+        delivery.UserFields.Fields("U_web_orderphone").Value = str(o['order_phone'])
+        delivery.UserFields.Fields("U_web_shipphone").Value = str(o['shipping_phone'])
+        delivery.UserFields.Fields("U_Web_CC_Last4").Value = str(o['cc_last4'])
+        delivery.UserFields.Fields("U_TWBS_ShipTo_Email").Value = str(o['order_email'])
+
+        if o['cc_type'] == 'MASTERCARD':
+            delivery.UserFields.Fields("U_web_cc_type").Value = 'MC'
+        elif o['cc_type'] == 'VISA':
+            delivery.UserFields.Fields("U_web_cc_type").Value = 'VISA'
+        elif o['cc_type'] == 'AMERICAN EXPRESS':
+            delivery.UserFields.Fields("U_web_cc_type").Value = 'AMEX'
+        elif o['cc_type'] == 'DISCOVER':
+            delivery.UserFields.Fields("U_web_cc_type").Value = 'DC'
+
+        if o['user_id']:
+            delivery.UserFields.Fields("U_WebCustomerID").Value = str(o['user_id']) 
+        
+        if 'order_shipping_cost' in o.keys():
+            delivery.Expenses.ExpenseCode = 1
+            delivery.Expenses.LineTotal = o['order_shipping_cost']
+            delivery.Expenses.TaxCode = 'FLEX'
+
+        if 'discount_percent' in o.keys():
+            delivery.DiscountPercent = o['discount_percent']
+
+        # Set Shipping Type
+        if 'transport_name' in o.keys():
+            delivery.TransportationCode = self.getTrnspCode(o['transport_name'])
+
+        # Set Payment Method
+        if 'payment_method' in o.keys():
+            delivery.PaymentMethod = o['payment_method']
+
+        ## Set bill to address properties
+        delivery.AddressExtension.BillToCity = o['billto_city']
+        delivery.AddressExtension.BillToCountry = o['billto_country']
+        delivery.AddressExtension.BillToCounty = o['billto_country']
+        delivery.AddressExtension.BillToState = o['billto_state']
+        delivery.AddressExtension.BillToStreet = o['billto_address']
+        delivery.AddressExtension.BillToZipCode = o['billto_zipcode']
+
+        ## Set ship to address properties
+        delivery.AddressExtension.ShipToCity = o['shipto_city']
+        delivery.AddressExtension.ShipToCountry = o['shipto_country']
+        delivery.AddressExtension.ShipToCounty = o['shipto_county']
+        delivery.AddressExtension.ShipToState = o['shipto_state']
+        delivery.AddressExtension.ShipToStreet = o['shipto_address']
+        delivery.AddressExtension.ShipToZipCode = o['shipto_zipcode']
+
+        # Set Comments
+        if 'comments' in o.keys():
+            delivery.Comments = o['comments']
+
+        i = 0
+        for item in o['items']:
+            delivery.Lines.Add()
+            delivery.Lines.SetCurrentLine(i)
+            delivery.Lines.ItemCode = item['itemcode']
+            delivery.Lines.Quantity = float(item['quantity'])
+            if item.get('price'):
+                delivery.Lines.UnitPrice = float(item['price'])
+            i = i + 1
+        if o['order_tax'] > 0:
+            delivery.Lines.Add()
+            delivery.Lines.SetCurrentLine(i)
+            delivery.Lines.ItemCode = 'SALESTAX'
+            delivery.Lines.Quantity = 1
+            delivery.Lines.UnitPrice = o['order_tax']
+        lRetCode = delivery.Add()
+        if lRetCode != 0:
+            error = str(self.com_adaptor.company.GetLastError())
+            current_app.logger.error(error)
+            msg = Message("TEST", recipients = ['id1@gmail.com'])
+            msg.body = "This is a test."
+            mail.send(msg)
+            raise Exception(error)
+        
+        params = None
+        params = {'U_WebOrderId': {'value': str(o['U_WebOrderId'])}}
+        orders = self.getOrders(num=1, columns=['DocEntry', 'DocTotal', 'DocNum'], params=params)
+        orderDocEntry = orders[0]['DocEntry']
+        orderDocTotal = orders[0]['DocTotal']
+        orderDocNum = orders[0]['DocNum']
+
+        deliveries =  self.getShipments(num=1, columns=['DocEntry', 'DocTotal', 'DocNum'], params=params)
+        deliveryDocEntry = deliveries[0]['DocEntry']
+        deliveryDocTotal = deliveries[0]['DocTotal']
+        deliveryDocNum = deliveries[0]['DocNum']
+
+        if deliveryDocEntry:
+                    link_delivery_sql= """UPDATE dbo.DLN1
+                                                SET dbo.DLN1.BaseRef = q.DocNum, dbo.DLN1.BaseType = 17, dbo.DLN1.BaseEntry = q.DocEntry
+                                                FROM dbo.ORDR q
+                                                WHERE dbo.DLN1.DocEntry = '{0}'
+                                                AND q.DocEntry = '{1}'
+                                            """.format(deliveryDocEntry,orderDocEntry)
+                    cursor = self.sql_adaptor.cursor
+                    cursor.execute(link_delivery_sql)
+                    self.sql_adaptor.conn.commit()
+
 
     def getItems(self, limit=1, columns=None, whs=None, code=None):
         """Retrieve items(products) from SAP B1.  """

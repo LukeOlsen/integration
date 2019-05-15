@@ -202,6 +202,30 @@ class ShipmentsAPI(Resource):
 
     def __init__(self):
         super(ShipmentsAPI, self).__init__()
+    
+    def post(self, function):
+        try:
+            orders = request.get_json(force=True)
+            if function == "insert":
+                for order in orders:
+                    try:
+                        order["order_id"] = sapb1Adaptor.insertShipment(order)
+                        order["tx_status"] = 'S'
+                    except Exception as e:
+                        log = traceback.format_exc()
+                        order["order_id"] = "####"
+                        order["tx_status"] = 'F'
+                        order["tx_note"] = log
+                        current_app.logger.exception(e)
+            else:
+                log = "No such function({0})!!!".format(function)
+                current_app.logger.error(log)
+                raise Exception(log)
+            return orders, 201
+        except Exception as e:
+            log = traceback.format_exc()
+            current_app.logger.exception(e)
+            return log, 501
 
     @jwt_required()
     def put(self, function):
