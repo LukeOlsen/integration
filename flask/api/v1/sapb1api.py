@@ -1,16 +1,45 @@
-from flask import request, current_app
+from flask import request, current_app, jsonify
 from ..app import sapb1Adaptor
-from flask_jwt import jwt_required, current_identity
+from flask_jwt_extended import jwt_required, create_access_token
 from flask_restful import Resource
 import json
 import traceback
+
+class Login(Resource):
+    def __init__(self):
+        super(Login, self).__init__()
+    
+    def post(self):
+        if not request.is_json:
+            print("error no json")
+            #return jsonify({"msg": "Missing JSON in request"}), 400
+
+        username = request.json.get('username', None)
+        password = request.json.get('password', None)
+        print(username)
+        print(password)
+        if not username:
+            print("error user")
+            #return jsonify({"msg": "Missing username parameter"}), 400
+        if not password:
+            print("error pass")
+            #return jsonify({"msg": "Missing password parameter"}), 400
+
+        if username != 'test' or password != 'test':
+            print("error both")
+            #return jsonify({"msg": "Bad username or password"}), 401
+
+        # Identity can be any data that is json serializable
+        access_token = create_access_token(identity=username)
+        return access_token, 200
+
 
 class InfoAPI(Resource):
 
     def __init__(self):
         super(InfoAPI, self).__init__()
 
-    @jwt_required()
+    @jwt_required
     def get(self):
         info = sapb1Adaptor.info()
         return info, 201
@@ -20,7 +49,7 @@ class CodeAPI(Resource):
     def __init__(self):
         super(CodeAPI, self).__init__()
 
-    @jwt_required()
+    @jwt_required
     def get(self):
         type = request.args.get("type")
         codes = []
@@ -41,7 +70,7 @@ class OrdersAPI(Resource):
     def __init__(self):
         super(OrdersAPI, self).__init__()
 
-    @jwt_required()
+    @jwt_required
     def put(self, function):
         try:
             if function == "fetch":
@@ -62,7 +91,7 @@ class OrdersAPI(Resource):
             current_app.logger.exception(e)
             return log, 501
 
-    @jwt_required()
+    @jwt_required
     def post(self, function):
         try:
             orders = request.get_json(force=True)
@@ -102,7 +131,7 @@ class QuotesAPI(Resource):
     def __init__(self):
         super(QuotesAPI, self).__init__()
 
-    @jwt_required()
+    @jwt_required
     def post(self):
         quotations = request.get_json(force=True)
         for quotation in quotations:
@@ -124,7 +153,7 @@ class CustomersAPI(Resource):
         current_app.logger.exception(e)
         return log, number
 
-    @jwt_required()
+    @jwt_required
     def post(self):
         data = request.get_json(force=True)
         try:
@@ -136,7 +165,7 @@ class CustomersAPI(Resource):
         except Exception as e:
             return error_to_json(e, 501)
 
-    @jwt_required()
+    @jwt_required
     def put(self):
         data = request.get_json(force=True)
         cardcode = request.args.get("cardcode", None)
@@ -155,7 +184,7 @@ class ContactsAPI(Resource):
     def __init__(self):
         super(ContactsAPI, self).__init__()
 
-    @jwt_required()
+    @jwt_required
     def put(self, function):
         try:
             if function == "fetch":
@@ -177,7 +206,7 @@ class ContactsAPI(Resource):
             current_app.logger.exception(e)
             return log, 501
 
-    @jwt_required()
+    @jwt_required
     def post(self, function):
         try:
             if function == "insert":
@@ -203,6 +232,7 @@ class ShipmentsAPI(Resource):
     def __init__(self):
         super(ShipmentsAPI, self).__init__()
     
+    @jwt_required
     def post(self, function):
         try:
             orders = request.get_json(force=True)
@@ -227,7 +257,7 @@ class ShipmentsAPI(Resource):
             current_app.logger.exception(e)
             return log, 501
 
-    @jwt_required()
+    @jwt_required
     def put(self, function):
         try:
             if function == "fetch":
@@ -255,7 +285,7 @@ class ItemsAPI(Resource):
     def __init__(self):
         super(ItemsAPI, self).__init__()
 
-    @jwt_required()
+    @jwt_required
     def get(self):
         try:
             limit = request.args.get("limit", 100)
@@ -276,7 +306,7 @@ class PricesAPI(Resource):
     def __init__(self):
         super(PricesAPI, self).__init__()
 
-    @jwt_required()
+    @jwt_required
     def get(self):
         try:
             limit = request.args.get("limit", 100)

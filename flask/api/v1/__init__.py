@@ -21,7 +21,7 @@ def bad_request_error(e):
 #    pass
 
 
-from .sapb1api import InfoAPI, CodeAPI, OrdersAPI, QuotesAPI, ContactsAPI, ShipmentsAPI, ItemsAPI, PricesAPI, CustomersAPI
+from .sapb1api import InfoAPI, CodeAPI, OrdersAPI, QuotesAPI, ContactsAPI, ShipmentsAPI, ItemsAPI, PricesAPI, CustomersAPI, Login
 
 api_v1.add_resource(InfoAPI, '/info', endpoint='info')
 api_v1.add_resource(CodeAPI, '/code', endpoint='code')
@@ -32,3 +32,4 @@ api_v1.add_resource(CustomersAPI, '/customers')
 api_v1.add_resource(ShipmentsAPI, '/shipments/<function>')
 api_v1.add_resource(ItemsAPI, '/items')
 api_v1.add_resource(PricesAPI, '/prices')
+api_v1.add_resource(Login, '/login')

@@ -2,7 +2,9 @@ import os
 from flask import Flask
 from .errors import not_found, not_allowed
 from flask_sapb1 import SAPB1Adaptor
-from flask_jwt import JWT
+from flask_jwt_extended import (
+    JWTManager, create_access_token, get_jwt_identity
+)
 from werkzeug.security import safe_str_cmp
 import logging
 from flask_mail import Mail
@@ -34,17 +36,17 @@ users = [
 username_table = {u.username: u for u in users}
 userid_table = {u.id: u for u in users}
 
-jwt = JWT(authentication_handler=authenticate, identity_handler=identity)
+jwt = JWTManager(authentication_handler=authenticate, identity_handler=identity)
 
 sapb1Adaptor = SAPB1Adaptor()
 
 def create_app(config_module=None):
     app = Flask(__name__)
-    app.secret_key = "byrkNHdlH6ux"
+    app.secret_key = "byrkNHddlH6ux"
     app.config.from_object(config_module or
                            os.environ.get('FLASK_CONFIG') or
                            'config')
-    mail = Mail(app)
+    
 
     app.config['MAIL_SERVER']='smtp.gmail.com'
     app.config['MAIL_PORT'] = 465
@@ -53,9 +55,11 @@ def create_app(config_module=None):
     app.config['MAIL_USE_TLS'] = False
     app.config['MAIL_USE_SSL'] = True
     app.config['MAIL_DEFAULT_SENDER'] = 'yourId@gmail.com'
+    #mail.init_app(app)
 
 
-    jwt.init_app(app)
+    #wt.init_app(app)
+    jwt = JWTManager(app)
 
     # connect to sapb1
     sapb1Adaptor.init_app(app)

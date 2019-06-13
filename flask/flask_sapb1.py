@@ -6,7 +6,6 @@ import decimal
 from pythoncom import CoInitialize
 import win32com.client.dynamic
 from flask_mail import Message
-from api.app import mail
 
 
 try:
@@ -175,6 +174,7 @@ class SAPB1Adaptor(object):
         if len(params) > 0:
             sql = sql + ' WHERE ' + " AND ".join(["{0} {1} %({2})s".format(k, ops[k], k) for k in params.keys()])
         args = {key: params[key]['value'] for key in params.keys()}
+        print(sql)
         return list(self.sql_adaptor.fetch_all(sql, args=args))
     
     def getDownPayment(self, num=1, columns=[], params={}):
@@ -360,8 +360,9 @@ class SAPB1Adaptor(object):
 
     def getTrnspCode(self, trnspName):
         """Retrieve TrnspCode by trnspName.  """
-        sql = """SELECT TrnspCode FROM dbo.OSHP WHERE TrnspName = %s"""
-        return self.sql_adaptor.fetchone(sql, trnspName)['TrnspCode']
+        sql = """SELECT [dbo].[@RPC_WEBSHIP_MAP].U_Service FROM [dbo].[@RPC_WEBSHIP_MAP] WHERE U_MagentoCode = %s"""
+        print(self.sql_adaptor.fetchone(sql, trnspName))
+        return self.sql_adaptor.fetchone(sql, trnspName)['U_Service']
 
     def getExpnsNames(self):
         """Retrieve expnsNames. """
@@ -428,16 +429,59 @@ class SAPB1Adaptor(object):
 
         # Set Shipping Type
         if 'transport_name' in o.keys():
-            order.TransportationCode = self.getTrnspCode(o['transport_name'])
+            #order.TransportationCode = self.getTrnspCode(o['transport_name'])
+            if o['transport_name'] == 'Domestic Ground - Domestic Ground':
+                order.TransportationCode = 'Ground'
+            elif o['transport_name'] == 'Domestic Ground - Free Shipping':
+                order.TransportationCode = 'Ground'
+            elif o['transport_name'] == 'International - Priority':
+                order.TransportationCode = 'Priority International'
+            elif o['transport_name'] == 'International - Expedited':
+                order.TransportationCode = 'Ground'
+            elif o['transport_name'] == 'Expedited International':
+                order.TransportationCode = 'Ground'
+            elif o['transport_name'] == 'Complimentary Shipping':
+                order.TransportationCode = 'Ground'
+            elif o['transport_name'] == 'Ground':
+                order.TransportationCode = 'Ground'
+            elif o['transport_name'] == 'Domestic Ground - Domestic Ground':
+                order.TransportationCode = 'Ground'
+            elif o['transport_name'] == 'Domestic Ground - Domestic Ground':
+                order.TransportationCode = 'Ground'
+            elif o['transport_name'] == 'Domestic Ground - Domestic Ground':
+                order.TransportationCode = 'Ground'
+            elif o['transport_name'] == 'Domestic Ground - Domestic Ground':
+                order.TransportationCode = 'Ground'
+            elif o['transport_name'] == 'Domestic Ground - Domestic Ground':
+                order.TransportationCode = 'Ground'
+            elif o['transport_name'] == 'Domestic Ground - Domestic Ground':
+                order.TransportationCode = 'Ground'
+            elif o['transport_name'] == 'Domestic Ground - Domestic Ground':
+                order.TransportationCode = 'Ground'
+            elif o['transport_name'] == 'Domestic Ground - Domestic Ground':
+                order.TransportationCode = 'Ground'
+            elif o['transport_name'] == 'Domestic Ground - Domestic Ground':
+                order.TransportationCode = 'Ground'
+            elif o['transport_name'] == 'Domestic Ground - Domestic Ground':
+                order.TransportationCode = 'Ground'
+            elif o['transport_name'] == 'Domestic Ground - Domestic Ground':
+                order.TransportationCode = 'Ground'
+            elif o['transport_name'] == 'Domestic Ground - Domestic Ground':
+                order.TransportationCode = 'Ground'
+            elif o['transport_name'] == 'Domestic Ground - Domestic Ground':
+                order.TransportationCode = 'Ground'
+
+            
 
         # Set Payment Method
         if 'payment_method' in o.keys():
             order.PaymentMethod = o['payment_method']
-
+        
+        
+       
         ## Set bill to address properties
         order.AddressExtension.BillToCity = o['billto_city']
         order.AddressExtension.BillToCountry = o['billto_country']
-        order.AddressExtension.BillToCounty = o['billto_country']
         order.AddressExtension.BillToState = o['billto_state']
         order.AddressExtension.BillToStreet = o['billto_address']
         order.AddressExtension.BillToZipCode = o['billto_zipcode']
@@ -445,7 +489,6 @@ class SAPB1Adaptor(object):
         ## Set ship to address properties
         order.AddressExtension.ShipToCity = o['shipto_city']
         order.AddressExtension.ShipToCountry = o['shipto_country']
-        order.AddressExtension.ShipToCounty = o['shipto_county']
         order.AddressExtension.ShipToState = o['shipto_state']
         order.AddressExtension.ShipToStreet = o['shipto_address']
         order.AddressExtension.ShipToZipCode = o['shipto_zipcode']
@@ -459,15 +502,17 @@ class SAPB1Adaptor(object):
             order.Lines.Add()
             order.Lines.SetCurrentLine(i)
             order.Lines.ItemCode = item['itemcode']
+            order.Lines.TaxCode = 'FLEX'
             order.Lines.Quantity = float(item['quantity'])
             if item.get('price'):
                 order.Lines.UnitPrice = float(item['price'])
             i = i + 1
-        if o['order_tax'] > 0:
+        if o['order_tax'] != '0.00':
             order.Lines.Add()
             order.Lines.SetCurrentLine(i)
             order.Lines.ItemCode = 'SALESTAX'
             order.Lines.Quantity = 1
+            order.Lines.TaxCode = 'FLEX'
             order.Lines.UnitPrice = o['order_tax']
         lRetCode = order.Add()
         if lRetCode != 0:
@@ -475,7 +520,7 @@ class SAPB1Adaptor(object):
             current_app.logger.error(error)
             msg = Message("TEST", recipients = ['id1@gmail.com'])
             msg.body = "This is a test."
-            mail.send(msg)
+            #mail.send(msg)
             raise Exception(error)
         
         params = None
@@ -487,86 +532,7 @@ class SAPB1Adaptor(object):
         
         if o['order_total'] > 0:
 
-
-            if o['giftcard_used'] == 'No':
-                print("GIFTCARD NO")   
-                downPayment = com.company.GetBusinessObject(com.constants.oDownPayments)
-                downPayment.DownPaymentType = com.constants.dptInvoice
-                downPayment.DocDueDate = o['doc_due_date']
-                downPayment.CardCode = 'C105212'
-                #order.NumAtCard = str(o['num_at_card'])
-                # User Field
-                downPayment.UserFields.Fields("U_WebOrderId").Value = str(o['U_WebOrderId'])
-                downPayment.UserFields.Fields("U_OrderSource").Value = 'Web Order'
-                downPayment.UserFields.Fields("U_TWBS_ShipTo_FName").Value = str(o['shipping_first_name'])
-                downPayment.UserFields.Fields("U_TWBS_ShipTo_Lname").Value = str(o['shipping_last_name'])
-                downPayment.UserFields.Fields("U_web_order_fname").Value = str(o['order_first_name'])
-                downPayment.UserFields.Fields("U_web_order_lname").Value = str(o['order_last_name'])
-                downPayment.UserFields.Fields("U_web_orderphone").Value = str(o['order_phone'])
-                downPayment.UserFields.Fields("U_web_shipphone").Value = str(o['shipping_phone'])
-                downPayment.UserFields.Fields("U_Web_CC_Last4").Value = str(o['cc_last4'])
-                downPayment.UserFields.Fields("U_TWBS_ShipTo_Email").Value = str(o['order_email'])
-
-                # Set Comments
-                if 'comments' in o.keys():
-                    downPayment.Comments = o['comments']
-
-                i = 0
-                for item in o['items']:
-                    downPayment.Lines.Add()
-                    downPayment.Lines.SetCurrentLine(i)
-                # downPayment.Lines.BaseLine = i
-                # downPayment.Lines.BaseEntry = orderDocEntry
-                # downPayment.Lines.BaseType = 17
-                    downPayment.Lines.ItemCode = item['itemcode']
-                    downPayment.Lines.Quantity = float(item['quantity'])
-                    if item.get('price'):
-                        downPayment.Lines.UnitPrice = float(item['price'])
-                    i = i + 1
-
-                downPayment.DocTotal = orderDocTotal    
-                lRetCode1 = downPayment.Add()
-                if lRetCode1 != 0:
-                    error = str(self.com_adaptor.company.GetLastError())
-                    current_app.logger.error(error)
-                    raise Exception(error)
-                #Linking Down Payment with Sales Order
-                downpayments = self.getDownPayment(num=1, columns=['DocEntry', 'DocTotal', 'DocDate'], params=params)
-                downPaymentDocEntry = downpayments[0]['DocEntry']
-                downPaymentDocTotal = downpayments[0]['DocTotal']
-                downPaymentDocDate = downpayments[0]['DocDate']
-                if orderDocEntry:
-                    link_downpayment_sql= """UPDATE dbo.DPI1
-                                                SET dbo.DPI1.BaseRef = q.DocNum, dbo.DPI1.BaseType = 17, dbo.DPI1.BaseEntry = q.DocEntry
-                                                FROM dbo.ORDR q
-                                                WHERE dbo.DPI1.DocEntry = '{0}'
-                                                AND q.DocEntry = '{1}'
-                                            """.format(downPaymentDocEntry,orderDocEntry)
-                    cursor = self.sql_adaptor.cursor
-                    cursor.execute(link_downpayment_sql)
-                    self.sql_adaptor.conn.commit() 
-
-                incomingPayments = com.company.GetBusinessObject(com.constants.oIncomingPayments)
-                incomingPayments.Invoices.DocEntry = downPaymentDocEntry
-                incomingPayments.Invoices.InvoiceType = com.constants.it_DownPayment
-                incomingPayments.Invoices.SumApplied = downPaymentDocTotal
-                incomingPayments.CardCode = 'C105212'
-                #incomingPayments.Comments = 'Created by Integration'
-                incomingPayments.TransferAccount = '_SYS00000000166'
-                incomingPayments.TransferReference = o['U_WebOrderId']
-                incomingPayments.TransferDate = downPaymentDocDate
-                incomingPayments.TransferSum = downPaymentDocTotal
-                lRetCode2 = incomingPayments.Add()
-                if lRetCode2 != 0:
-                    error = str(self.com_adaptor.company.GetLastError())
-                    current_app.logger.error(error)
-                    raise Exception(error)
-
-
-
-
-
-            if o['giftcard_used'] == 'Yes' and o['giftcard_amount'] < o['order_total']:
+            if o['giftcard'] and o['giftcard_amount'] < o['order_total']:
                 print("DOUBLE DOWN PAYMENT")
                 cashDownPayment = com.company.GetBusinessObject(com.constants.oDownPayments)
                 cashDownPayment.DownPaymentType = com.constants.dptInvoice
@@ -692,7 +658,7 @@ class SAPB1Adaptor(object):
                     raise Exception(error)      
                 
             
-            if o['giftcard_used'] == 'Yes' and o['giftcard_amount'] >= o['order_total']:
+            elif o['giftcard'] and o['giftcard_amount'] >= o['order_total']:
                 downPayment = com.company.GetBusinessObject(com.constants.oDownPayments)
                 downPayment.DownPaymentType = com.constants.dptInvoice
                 downPayment.DocDueDate = o['doc_due_date']
@@ -757,6 +723,80 @@ class SAPB1Adaptor(object):
                 incomingPayments.CardCode = 'C105212'
                 #incomingPayments.Comments = 'Created by Integration'
                 incomingPayments.TransferAccount = '_SYS00000000517'
+                incomingPayments.TransferReference = o['U_WebOrderId']
+                incomingPayments.TransferDate = downPaymentDocDate
+                incomingPayments.TransferSum = downPaymentDocTotal
+                lRetCode2 = incomingPayments.Add()
+                if lRetCode2 != 0:
+                    error = str(self.com_adaptor.company.GetLastError())
+                    current_app.logger.error(error)
+                    raise Exception(error)
+
+            else:
+                print("GIFTCARD NO")   
+                downPayment = com.company.GetBusinessObject(com.constants.oDownPayments)
+                downPayment.DownPaymentType = com.constants.dptInvoice
+                downPayment.DocDueDate = o['doc_due_date']
+                downPayment.CardCode = 'C105212'
+                #order.NumAtCard = str(o['num_at_card'])
+                # User Field
+                downPayment.UserFields.Fields("U_WebOrderId").Value = str(o['U_WebOrderId'])
+                downPayment.UserFields.Fields("U_OrderSource").Value = 'Web Order'
+                downPayment.UserFields.Fields("U_TWBS_ShipTo_FName").Value = str(o['shipping_first_name'])
+                downPayment.UserFields.Fields("U_TWBS_ShipTo_Lname").Value = str(o['shipping_last_name'])
+                downPayment.UserFields.Fields("U_web_order_fname").Value = str(o['order_first_name'])
+                downPayment.UserFields.Fields("U_web_order_lname").Value = str(o['order_last_name'])
+                downPayment.UserFields.Fields("U_web_orderphone").Value = str(o['order_phone'])
+                downPayment.UserFields.Fields("U_web_shipphone").Value = str(o['shipping_phone'])
+                downPayment.UserFields.Fields("U_Web_CC_Last4").Value = str(o['cc_last4'])
+                downPayment.UserFields.Fields("U_TWBS_ShipTo_Email").Value = str(o['order_email'])
+
+                # Set Comments
+                if 'comments' in o.keys():
+                    downPayment.Comments = o['comments']
+
+                i = 0
+                for item in o['items']:
+                    downPayment.Lines.Add()
+                    downPayment.Lines.SetCurrentLine(i)
+                # downPayment.Lines.BaseLine = i
+                # downPayment.Lines.BaseEntry = orderDocEntry
+                # downPayment.Lines.BaseType = 17
+                    downPayment.Lines.ItemCode = item['itemcode']
+                    downPayment.Lines.Quantity = float(item['quantity'])
+                    if item.get('price'):
+                        downPayment.Lines.UnitPrice = float(item['price'])
+                    i = i + 1
+
+                downPayment.DocTotal = orderDocTotal    
+                lRetCode1 = downPayment.Add()
+                if lRetCode1 != 0:
+                    error = str(self.com_adaptor.company.GetLastError())
+                    current_app.logger.error(error)
+                    raise Exception(error)
+                #Linking Down Payment with Sales Order
+                downpayments = self.getDownPayment(num=1, columns=['DocEntry', 'DocTotal', 'DocDate'], params=params)
+                downPaymentDocEntry = downpayments[0]['DocEntry']
+                downPaymentDocTotal = downpayments[0]['DocTotal']
+                downPaymentDocDate = downpayments[0]['DocDate']
+                if orderDocEntry:
+                    link_downpayment_sql= """UPDATE dbo.DPI1
+                                                SET dbo.DPI1.BaseRef = q.DocNum, dbo.DPI1.BaseType = 17, dbo.DPI1.BaseEntry = q.DocEntry
+                                                FROM dbo.ORDR q
+                                                WHERE dbo.DPI1.DocEntry = '{0}'
+                                                AND q.DocEntry = '{1}'
+                                            """.format(downPaymentDocEntry,orderDocEntry)
+                    cursor = self.sql_adaptor.cursor
+                    cursor.execute(link_downpayment_sql)
+                    self.sql_adaptor.conn.commit() 
+
+                incomingPayments = com.company.GetBusinessObject(com.constants.oIncomingPayments)
+                incomingPayments.Invoices.DocEntry = downPaymentDocEntry
+                incomingPayments.Invoices.InvoiceType = com.constants.it_DownPayment
+                incomingPayments.Invoices.SumApplied = downPaymentDocTotal
+                incomingPayments.CardCode = 'C105212'
+                #incomingPayments.Comments = 'Created by Integration'
+                incomingPayments.TransferAccount = '_SYS00000000166'
                 incomingPayments.TransferReference = o['U_WebOrderId']
                 incomingPayments.TransferDate = downPaymentDocDate
                 incomingPayments.TransferSum = downPaymentDocTotal
@@ -837,25 +877,42 @@ class SAPB1Adaptor(object):
             sql = sql + ' WHERE ' + " AND ".join(["{0} = %({1})s".format(k, k) for k in params.keys()])
         return list(self.sql_adaptor.fetch_all(sql, params))
 
-    def getShipments(self, num=100, columns=[], params={}, itemColumns=[]):
-        """Retrieve shipments(deliveries) from SAP B1.
+#    def getShipments(self, num=100, columns=[], params={}, itemColumns=[]):
+#        """Retrieve shipments(deliveries) from SAP B1.
+#        """
+#        cols = '*'
+#        if 'DocEntry' not in columns:
+#            columns.append('DocEntry')
+#        if len(columns) > 0:
+#            cols = " ,".join(columns)
+#        ops = {key: '=' if 'op' not in params[key].keys() else params[key]['op'] for key in params.keys()}
+#        sql = """SELECT top {0} {1} FROM dbo.ODLN""".format(num, cols)
+#        if len(params) > 0:
+#            sql = sql + ' WHERE ' + " AND ".join(["{0} {1} %({2})s".format(k, ops[k], k) for k in params.keys()])#
+#
+#        p = {key: v['value'] for key, v in params.keys()}
+#        shipments = list(self.sql_adaptor.fetch_all(sql, p))
+#        for shipment in shipments:
+#            shipmentId = shipment['DocEntry']
+#            shipment['items'] = self._getShipmentItems(shipmentId, itemColumns)
+#        return shipments
+    
+    def getShipments(self, num=1, columns=[], params={}):
+        """Retrieve orders from SAP B1.
         """
         cols = '*'
-        if 'DocEntry' not in columns:
-            columns.append('DocEntry')
         if len(columns) > 0:
             cols = " ,".join(columns)
         ops = {key: '=' if 'op' not in params[key].keys() else params[key]['op'] for key in params.keys()}
         sql = """SELECT top {0} {1} FROM dbo.ODLN""".format(num, cols)
         if len(params) > 0:
             sql = sql + ' WHERE ' + " AND ".join(["{0} {1} %({2})s".format(k, ops[k], k) for k in params.keys()])
-
-        p = {key: v['value'] for key, v in params.keys()}
-        shipments = list(self.sql_adaptor.fetch_all(sql, p))
-        for shipment in shipments:
-            shipmentId = shipment['DocEntry']
-            shipment['items'] = self._getShipmentItems(shipmentId, itemColumns)
-        return shipments
+        args = {key: params[key]['value'] for key in params.keys()}
+        print(sql)
+        return list(self.sql_adaptor.fetch_all(sql, args=args))
+    
+    def getLineNum(self, sql):
+        return list(self.sql_adaptor.fetch_all(sql))
 
     def insertShipment(self, o):
         """Insert shipments into SAP B1.
@@ -899,7 +956,9 @@ class SAPB1Adaptor(object):
 
         # Set Shipping Type
         if 'transport_name' in o.keys():
-            delivery.TransportationCode = self.getTrnspCode(o['transport_name'])
+            #order.TransportationCode = self.getTrnspCode(o['transport_name'])
+            if o['transport_name'] == 'fe_dex_three_day':
+                order.TransportationCode = '3 Day Shipping'
 
         # Set Payment Method
         if 'payment_method' in o.keys():
@@ -924,6 +983,14 @@ class SAPB1Adaptor(object):
         # Set Comments
         if 'comments' in o.keys():
             delivery.Comments = o['comments']
+        
+        params = None
+        params = {'U_WebOrderId': {'value': str(o['U_WebOrderId'])}}
+        orders = self.getOrders(num=1, columns=['DocEntry', 'DocTotal', 'DocNum'], params=params)
+        orderDocEntry = orders[0]['DocEntry']
+        orderDocTotal = orders[0]['DocTotal']
+        orderDocNum = orders[0]['DocNum']
+        print(delivery.Lines)
 
         i = 0
         for item in o['items']:
@@ -931,8 +998,20 @@ class SAPB1Adaptor(object):
             delivery.Lines.SetCurrentLine(i)
             delivery.Lines.ItemCode = item['itemcode']
             delivery.Lines.Quantity = float(item['quantity'])
+            #delivery.Lines.BaseEntry = float(orderDocEntry)
+            delivery.Lines.TaxCode = 'FLEX'
+            
             if item.get('price'):
                 delivery.Lines.UnitPrice = float(item['price'])
+            
+            find_ordr_linenum_sql="""SELECT dbo.RDR1.LineNum
+                                    FROM dbo.ORDR INNER JOIN dbo.RDR1 ON dbo.ORDR.DocEntry = dbo.RDR1.DocEntry
+                                    WHERE dbo.ORDR.DocNum = '{0}' and dbo.RDR1.ItemCode = '{1}'
+                                    """.format(orderDocNum, item['itemcode'])
+
+            lineNum = self.getLineNum(find_ordr_linenum_sql)
+            test = int(lineNum[0]['LineNum'])
+            delivery.Lines.BaseLine = test
             i = i + 1
         if o['order_tax'] > 0:
             delivery.Lines.Add()
@@ -944,17 +1023,10 @@ class SAPB1Adaptor(object):
         if lRetCode != 0:
             error = str(self.com_adaptor.company.GetLastError())
             current_app.logger.error(error)
-            msg = Message("TEST", recipients = ['id1@gmail.com'])
-            msg.body = "This is a test."
-            mail.send(msg)
+            #msg = Message("TEST", recipients = ['id1@gmail.com'])
+            #msg.body = "This is a test."
+            #mail.send(msg)
             raise Exception(error)
-        
-        params = None
-        params = {'U_WebOrderId': {'value': str(o['U_WebOrderId'])}}
-        orders = self.getOrders(num=1, columns=['DocEntry', 'DocTotal', 'DocNum'], params=params)
-        orderDocEntry = orders[0]['DocEntry']
-        orderDocTotal = orders[0]['DocTotal']
-        orderDocNum = orders[0]['DocNum']
 
         deliveries =  self.getShipments(num=1, columns=['DocEntry', 'DocTotal', 'DocNum'], params=params)
         deliveryDocEntry = deliveries[0]['DocEntry']
@@ -963,11 +1035,11 @@ class SAPB1Adaptor(object):
 
         if deliveryDocEntry:
                     link_delivery_sql= """UPDATE dbo.DLN1
-                                                SET dbo.DLN1.BaseRef = q.DocNum, dbo.DLN1.BaseType = 17, dbo.DLN1.BaseEntry = q.DocEntry
+                                                SET dbo.DLN1.BaseRef = q.DocNum, dbo.DLN1.BaseType = 17, dbo.DLN1.BaseEntry = q.DocEntry, dbo.DLN1.BaseDocNum = '{3}'
                                                 FROM dbo.ORDR q
                                                 WHERE dbo.DLN1.DocEntry = '{0}'
                                                 AND q.DocEntry = '{1}'
-                                            """.format(deliveryDocEntry,orderDocEntry)
+                                            """.format(deliveryDocEntry, orderDocEntry, orderDocNum)
                     cursor = self.sql_adaptor.cursor
                     cursor.execute(link_delivery_sql)
                     self.sql_adaptor.conn.commit()
